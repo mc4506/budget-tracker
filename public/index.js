@@ -1,3 +1,5 @@
+import './styles.css';
+
 let transactions = [];
 let myChart;
 
