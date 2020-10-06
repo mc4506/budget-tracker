@@ -1,12 +1,17 @@
 const WebpackPwaManifest = require('webpack-pwa-manifest');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const CleanWebpackPlugin = require('clean-webpack-plugin');
 const path = require('path');
 
 const config = {
-    mode: "development",
-    entry: "./index.js",
+    mode: "production",
+    entry: {
+        index: "./index.js",
+        db: "./db.js"
+    },
     output: {
         path: __dirname + "/dist",
-        filename:"bundle.js"
+        filename:"[name].bundle.js"
     },
     module: {
         rules: [
@@ -14,6 +19,10 @@ const config = {
             test: /\.css$/i,
             use: ['style-loader', 'css-loader'],
           },
+          {
+            test: /\.html$/i,
+            use: ['html-loader'] 
+          }
         ],
     },
     plugins: [
@@ -31,7 +40,12 @@ const config = {
                 destination: path.join('assets', 'icons')
             }]
 
-        })
+        }),
+        new HtmlWebpackPlugin({
+            title: 'Budget Tracker',
+            template: 'index.html'
+        }),
+        new CleanWebpackPlugin(),
     ]
 
 }
