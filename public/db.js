@@ -1,11 +1,13 @@
 let db;
 // create a new db request for a "budget" database.
-const request = indexedDB.open("budget", 1);
+const request = window.indexedDB.open("budget", 1);
 
 request.onupgradeneeded = function(event) {
    // create object store called "pending" and set autoIncrement to true
-  const db = event.target.result;
-  db.createObjectStore("pending", { autoIncrement: true });
+  const pending = event.target.result.createObjectStore("pending", { autoIncrement: true });
+  pending.createIndex("nameIndex", "name");
+  pending.createIndex("valueIndex", "value");
+  pending.createIndex("dateIndex", "date");
 };
 
 request.onsuccess = function(event) {
@@ -22,23 +24,28 @@ request.onerror = function(event) {
 };
 
 function saveRecord(record) {
+  console.log(record);
   // create a transaction on the pending db with readwrite access
   const transaction = db.transaction(["pending"], "readwrite");
 
   // access your pending object store
-  const store = transaction.objectStore("pending");
+  const pendingObjectStore = transaction.objectStore("pending");
 
   // add record to your store with add method.
-  store.add(record);
+  pendingObjectStore.add(record);
 }
 
 function checkDatabase() {
   // open a transaction on your pending db
   const transaction = db.transaction(["pending"], "readwrite");
   // access your pending object store
-  const store = transaction.objectStore("pending");
+  const pendingObjectStore = transaction.objectStore("pending");
+  const nameIndex = pendingObjectStore.index("nameIndex");
+  const valueIndex = pendingObjectStore.index("valueIndex");
+  const dateIndex = pendingObjectStore.index("dateIndex");
+
   // get all records from store and set to a variable
-  const getAll = store.getAll();
+  const getAll = pendingObjectStore.getAll();
 
   getAll.onsuccess = function() {
     if (getAll.result.length > 0) {
@@ -56,10 +63,10 @@ function checkDatabase() {
         const transaction = db.transaction(["pending"], "readwrite");
 
         // access your pending object store
-        const store = transaction.objectStore("pending");
+        const pendingObjectStore = transaction.objectStore("pending");
 
         // clear all items in your store
-        store.clear();
+        pendingObjectStore.clear();
       });
     }
   };
