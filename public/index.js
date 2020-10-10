@@ -1,5 +1,8 @@
 const Chart = require('chart.js');
 import './styles.css';
+import {
+  useIDb
+} from './indexedDb.js';
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -19,13 +22,26 @@ fetch("/api/transaction")
     return response.json();
   })
   .then(data => {
-    // save db data on global variable
+     console.log("online");
     transactions = data;
-
-    populateTotal();
-    populateTable();
-    populateChart();
-  });
+    console.log(transactions);
+    getAndSendBulk(transactions);
+    
+  })
+  .catch(err => {
+    console.log("offline");
+    useIDb("budget", "offlineStore", "get")
+      .then(results => {
+        // console.log(results);
+        results.forEach(result => {
+          transactions.push(result);
+        })
+        console.log(transactions);
+        populateTotal();
+        populateTable();
+        populateChart();
+      })
+  })
 
 function populateTotal() {
   // reduce transaction amounts to a single total value
@@ -79,15 +95,45 @@ function populateChart() {
 
   myChart = new Chart(ctx, {
     type: 'line',
-      data: {
-        labels,
-        datasets: [{
-            label: "Total Over Time",
-            fill: true,
-            backgroundColor: "#6666ff",
-            data
-        }]
+    data: {
+      labels,
+      datasets: [{
+        label: "Total Over Time",
+        fill: true,
+        backgroundColor: "#6666ff",
+        data
+      }]
     }
+  });
+}
+
+function getAndSendBulk(bulkData) {
+  useIDb("budget", "offlineStore", "get")
+  .then(results => {
+    console.log(results);
+    results.forEach(result => {
+      bulkData.push(result);
+    });
+    populateTotal();
+    populateTable();
+    populateChart();
+
+    if(results.length > 0) {
+      fetch("/api/transaction/bulk", {
+        method: "POST",
+        body: JSON.stringify(results),
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          "Content-Type": "application/json"
+        }
+      })
+      .then(response => {
+        useIDb("budget", "offlineStore", "clear")
+          .then( result => {
+            console.log("cleared IDb");
+          })
+      })
+    } 
   });
 }
 
@@ -100,8 +146,7 @@ function sendTransaction(isAdding) {
   if (nameEl.value === "" || amountEl.value === "") {
     errorEl.textContent = "Missing Information";
     return;
-  }
-  else {
+  } else {
     errorEl.textContent = "";
   }
 
@@ -124,43 +169,42 @@ function sendTransaction(isAdding) {
   populateChart();
   populateTable();
   populateTotal();
-  
+
   // also send to server
   fetch("/api/transaction", {
-    method: "POST",
-    body: JSON.stringify(transaction),
-    headers: {
-      Accept: "application/json, text/plain, */*",
-      "Content-Type": "application/json"
-    }
-  })
-  .then(response => {    
-    return response.json();
-  })
-  .then(data => {
-    if (data.errors) {
-      errorEl.textContent = "Missing Information";
-    }
-    else {
+      method: "POST",
+      body: JSON.stringify(transaction),
+      headers: {
+        Accept: "application/json, text/plain, */*",
+        "Content-Type": "application/json"
+      }
+    })
+    .then(response => {
+      return response.json();
+    })
+    .then(data => {
+      if (data.errors) {
+        errorEl.textContent = "Missing Information";
+      } else {
+        // clear form
+        nameEl.value = "";
+        amountEl.value = "";
+      }
+    })
+    .catch(err => {
+      // fetch failed, so save in indexed db
+      useIDb("budget", "offlineStore", "add", transaction)
+
       // clear form
       nameEl.value = "";
       amountEl.value = "";
-    }
-  })
-  .catch(err => {
-    // fetch failed, so save in indexed db
-    saveRecord(transaction);
-
-    // clear form
-    nameEl.value = "";
-    amountEl.value = "";
-  });
+    });
 }
 
-document.querySelector("#add-btn").onclick = function() {
+document.querySelector("#add-btn").onclick = function () {
   sendTransaction(true);
 };
 
-document.querySelector("#sub-btn").onclick = function() {
+document.querySelector("#sub-btn").onclick = function () {
   sendTransaction(false);
 };

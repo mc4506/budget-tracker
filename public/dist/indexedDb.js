@@ -1,6 +1,66 @@
 /******/ (function(modules) { // webpackBootstrap
+/******/ 	// install a JSONP callback for chunk loading
+/******/ 	function webpackJsonpCallback(data) {
+/******/ 		var chunkIds = data[0];
+/******/ 		var moreModules = data[1];
+/******/ 		var executeModules = data[2];
+/******/
+/******/ 		// add "moreModules" to the modules object,
+/******/ 		// then flag all "chunkIds" as loaded and fire callback
+/******/ 		var moduleId, chunkId, i = 0, resolves = [];
+/******/ 		for(;i < chunkIds.length; i++) {
+/******/ 			chunkId = chunkIds[i];
+/******/ 			if(Object.prototype.hasOwnProperty.call(installedChunks, chunkId) && installedChunks[chunkId]) {
+/******/ 				resolves.push(installedChunks[chunkId][0]);
+/******/ 			}
+/******/ 			installedChunks[chunkId] = 0;
+/******/ 		}
+/******/ 		for(moduleId in moreModules) {
+/******/ 			if(Object.prototype.hasOwnProperty.call(moreModules, moduleId)) {
+/******/ 				modules[moduleId] = moreModules[moduleId];
+/******/ 			}
+/******/ 		}
+/******/ 		if(parentJsonpFunction) parentJsonpFunction(data);
+/******/
+/******/ 		while(resolves.length) {
+/******/ 			resolves.shift()();
+/******/ 		}
+/******/
+/******/ 		// add entry modules from loaded chunk to deferred list
+/******/ 		deferredModules.push.apply(deferredModules, executeModules || []);
+/******/
+/******/ 		// run deferred modules when all chunks ready
+/******/ 		return checkDeferredModules();
+/******/ 	};
+/******/ 	function checkDeferredModules() {
+/******/ 		var result;
+/******/ 		for(var i = 0; i < deferredModules.length; i++) {
+/******/ 			var deferredModule = deferredModules[i];
+/******/ 			var fulfilled = true;
+/******/ 			for(var j = 1; j < deferredModule.length; j++) {
+/******/ 				var depId = deferredModule[j];
+/******/ 				if(installedChunks[depId] !== 0) fulfilled = false;
+/******/ 			}
+/******/ 			if(fulfilled) {
+/******/ 				deferredModules.splice(i--, 1);
+/******/ 				result = __webpack_require__(__webpack_require__.s = deferredModule[0]);
+/******/ 			}
+/******/ 		}
+/******/
+/******/ 		return result;
+/******/ 	}
+/******/
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
+/******/
+/******/ 	// object to store loaded and loading chunks
+/******/ 	// undefined = chunk not loaded, null = chunk preloaded/prefetched
+/******/ 	// Promise = chunk loading, 0 = chunk loaded
+/******/ 	var installedChunks = {
+/******/ 		"indexedDb": 0
+/******/ 	};
+/******/
+/******/ 	var deferredModules = [];
 /******/
 /******/ 	// The require function
 /******/ 	function __webpack_require__(moduleId) {
@@ -79,22 +139,18 @@
 /******/ 	// __webpack_public_path__
 /******/ 	__webpack_require__.p = "";
 /******/
+/******/ 	var jsonpArray = window["webpackJsonp"] = window["webpackJsonp"] || [];
+/******/ 	var oldJsonpFunction = jsonpArray.push.bind(jsonpArray);
+/******/ 	jsonpArray.push = webpackJsonpCallback;
+/******/ 	jsonpArray = jsonpArray.slice();
+/******/ 	for(var i = 0; i < jsonpArray.length; i++) webpackJsonpCallback(jsonpArray[i]);
+/******/ 	var parentJsonpFunction = oldJsonpFunction;
 /******/
-/******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = "./db.js");
+/******/
+/******/ 	// add entry module to deferred list
+/******/ 	deferredModules.push(["./indexedDb.js","commons~index~indexedDb"]);
+/******/ 	// run deferred modules when ready
+/******/ 	return checkDeferredModules();
 /******/ })
 /************************************************************************/
-/******/ ({
-
-/***/ "./db.js":
-/*!***************!*\
-  !*** ./db.js ***!
-  \***************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-eval("var db; // create a new db request for a \"budget\" database.\n\nvar request = window.indexedDB.open(\"budget\", 1);\n\nrequest.onupgradeneeded = function (event) {\n  // create object store called \"pending\" and set autoIncrement to true\n  var pending = event.target.result.createObjectStore(\"pending\", {\n    autoIncrement: true\n  });\n  pending.createIndex(\"nameIndex\", \"name\");\n  pending.createIndex(\"valueIndex\", \"value\");\n  pending.createIndex(\"dateIndex\", \"date\");\n};\n\nrequest.onsuccess = function (event) {\n  db = event.target.result; // check if app is online before reading from db\n\n  if (navigator.onLine) {\n    checkDatabase();\n  }\n};\n\nrequest.onerror = function (event) {\n  console.log(\"Woops! \" + event.target.errorCode);\n};\n\nfunction saveRecord(record) {\n  console.log(record); // create a transaction on the pending db with readwrite access\n\n  var transaction = db.transaction([\"pending\"], \"readwrite\"); // access your pending object store\n\n  var pendingObjectStore = transaction.objectStore(\"pending\"); // add record to your store with add method.\n\n  pendingObjectStore.add(record);\n}\n\nfunction checkDatabase() {\n  // open a transaction on your pending db\n  var transaction = db.transaction([\"pending\"], \"readwrite\"); // access your pending object store\n\n  var pendingObjectStore = transaction.objectStore(\"pending\");\n  var nameIndex = pendingObjectStore.index(\"nameIndex\");\n  var valueIndex = pendingObjectStore.index(\"valueIndex\");\n  var dateIndex = pendingObjectStore.index(\"dateIndex\"); // get all records from store and set to a variable\n\n  var getAll = pendingObjectStore.getAll();\n\n  getAll.onsuccess = function () {\n    if (getAll.result.length > 0) {\n      fetch(\"/api/transaction/bulk\", {\n        method: \"POST\",\n        body: JSON.stringify(getAll.result),\n        headers: {\n          Accept: \"application/json, text/plain, */*\",\n          \"Content-Type\": \"application/json\"\n        }\n      }).then(function (response) {\n        return response.json();\n      }).then(function () {\n        // if successful, open a transaction on your pending db\n        var transaction = db.transaction([\"pending\"], \"readwrite\"); // access your pending object store\n\n        var pendingObjectStore = transaction.objectStore(\"pending\"); // clear all items in your store\n\n        pendingObjectStore.clear();\n      });\n    }\n  };\n} // listen for app coming back online\n\n\nwindow.addEventListener(\"online\", checkDatabase);\n\n//# sourceURL=webpack:///./db.js?");
-
-/***/ })
-
-/******/ });
+/******/ ([]);

@@ -6,8 +6,8 @@ const path = require('path');
 
 const config = {
     entry: {
-        index: "./index.js",
-        db: "./db.js",
+      indexedDb: "./indexedDb.js",  
+      index: "./index.js"
     },
     optimization: {
       chunkIds: "named",

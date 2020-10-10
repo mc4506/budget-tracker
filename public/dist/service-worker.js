@@ -116,14 +116,17 @@ define("./service-worker.js",['./workbox-d797bd95'], function (workbox) { 'use s
     "url": "assets/icons/icon_72x72.8bd78b686eaa2d8ba7fd0c1bb2aff553.png",
     "revision": "8bd78b686eaa2d8ba7fd0c1bb2aff553"
   }, {
-    "url": "db.js",
-    "revision": "af1f5f8183f5611f81094a99cb82cb97"
+    "url": "commons~index~indexedDb.js",
+    "revision": "5059e274e87ac89291fa4f1691891fa9"
   }, {
     "url": "index.html",
-    "revision": "10789011da90c92ea2f8bde9e3b028ac"
+    "revision": "3794726d47fcab72e8bb3039537b0d23"
   }, {
     "url": "index.js",
-    "revision": "3ddd8d86c31ff15254a1c18521c54d91"
+    "revision": "a701b8054f1449abd9973228b485f113"
+  }, {
+    "url": "indexedDb.js",
+    "revision": "de4ee50d5cac82b85415321eca1d31ed"
   }, {
     "url": "manifest.5df9d36e1a654a5d1e5f5f6dbd82585e.json",
     "revision": "5df9d36e1a654a5d1e5f5f6dbd82585e"
